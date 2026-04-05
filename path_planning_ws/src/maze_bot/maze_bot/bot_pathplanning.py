@@ -123,7 +123,7 @@ class bot_pathplanner():
             print(Path_str," from {} to {} is =  {}".format(start,end,pathpts_to_display))
 
         if (method =="dijisktra"):
-            if (self.dijisktra.shortest_path_overlayed == []):
+            if not isinstance(self.dijisktra.shortest_path_overlayed, np.ndarray):
                 self.draw_path_on_maze(maze,pathpts_to_display,method)
             else:
                 if config.debug and config.debug_pathplanning:
@@ -135,7 +135,7 @@ class bot_pathplanner():
                         pass
 
         elif (method == "a_star"):
-            if (self.astar.shortest_path_overlayed == []):
+            if not isinstance(self.astar.shortest_path_overlayed, np.ndarray):
                 self.draw_path_on_maze(maze,pathpts_to_display,method)
             else:
                 if config.debug and config.debug_pathplanning:
