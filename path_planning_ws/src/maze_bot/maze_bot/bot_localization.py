@@ -88,22 +88,30 @@ class bot_localizer():
     
     def extract_bg(self,frame):
 
-        # a) Find Contours of all ROI's in frozen sat_view 
+        # a) Find Contours of all ROI's in frozen sat_view
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         edges = cv2.Canny(gray, 50, 150,None,3)
         # [connect_objs] => Connect disconnected edges that are close enough
         edges = self.connect_objs(edges)
         cnts = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[0]
+
+        # Guard: if no contours found at all, skip BG extraction (image may not be ready)
+        if len(cnts) == 0:
+            self.is_bg_extracted = False
+            return
+
         rois_mask = np.zeros((frame.shape[0],frame.shape[1]),dtype= np.uint8)
         for idx,_ in enumerate(cnts):
             cv2.drawContours(rois_mask, cnts, idx, 255,-1)
 
-        # b) Extract BG_model by 
+        # b) Extract BG_model by
         #               i)  removing the smallest object from the scene (Bot)
         #               ii) filling the empty region with Ground_replica
         min_cntr_idx = ret_smallest_obj(cnts)
         rois_noCar_mask = rois_mask.copy()
-        #    If Smallest Object (FG) found         
+        frame_car_remvd = frame.copy()
+        Ground_replica = np.ones_like(frame) * frame[0][0]
+        #    If Smallest Object (FG) found
         if min_cntr_idx !=-1:
             cv2.drawContours(rois_noCar_mask, cnts, min_cntr_idx, 0,-1)
             # Drawing dilated car_mask
@@ -112,18 +120,24 @@ class bot_localizer():
             cv2.drawContours(car_mask, cnts, min_cntr_idx, 255, 3)
             notCar_mask = cv2.bitwise_not(car_mask)
             frame_car_remvd = cv2.bitwise_and(frame, frame,mask = notCar_mask)
-            # Generating ground replica 
+            # Generating ground replica
             base_clr = frame_car_remvd[0][0]
             Ground_replica = np.ones_like(frame)*base_clr
             # Generating BG_model
             self.bg_model = cv2.bitwise_and(Ground_replica, Ground_replica,mask = car_mask)
             self.bg_model = cv2.bitwise_or(self.bg_model, frame_car_remvd)
-        
+        else:
+            # No car detected — use full frame as BG model
+            self.bg_model = frame.copy()
+
         # Step 2: Extracting the maze (Frame of Refrence) Maze Entry on Top
-        
+
         # a) Finding dimensions of hull enclosing largest contour
         hull = self.ret_rois_boundinghull(rois_mask,cnts)
         [X,Y,W,H] = cv2.boundingRect(hull)
+        if W == 0 or H == 0:
+            self.is_bg_extracted = False
+            return
         # b) Cropping maze_mask from the image
         maze = rois_noCar_mask[Y:Y+H,X:X+W]
         maze_occupencygrid = cv2.bitwise_not(maze)
@@ -167,12 +181,19 @@ class bot_localizer():
         self.loc_car = (int(bot_on_maze[0]),int(bot_on_maze[1]))
 
     def localize_bot(self,curr_frame,frame_disp):
-        
+
         # Step 1: Background Model Extraction
         if not self.is_bg_extracted:
             self.extract_bg(curr_frame.copy())
-            self.is_bg_extracted = True
-            
+            # If extract_bg failed (reset is_bg_extracted), skip this iteration
+            if not self.is_bg_extracted:
+                return
+
+        # Guard: bg_model must be a valid numpy array before proceeding
+        if not isinstance(self.bg_model, np.ndarray) or self.bg_model.size == 0:
+            self.is_bg_extracted = False
+            return
+
         # Step 2: Foreground Detection
         change = cv2.absdiff(curr_frame, self.bg_model)
         change_gray = cv2.cvtColor(change, cv2.COLOR_BGR2GRAY)
