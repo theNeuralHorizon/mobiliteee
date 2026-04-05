@@ -226,10 +226,24 @@ class maze_solver(Node):
         # [Stage 1: Localization] Localizing robot at each iteration
         self.bot_localizer.localize_bot(self.sat_view, frame_disp)
 
+        # Guard: localization must produce a valid maze occupancy grid
+        if not isinstance(self.bot_localizer.maze_og, np.ndarray) or self.bot_localizer.maze_og.size == 0:
+            self.get_logger().info('Localization: waiting for valid maze detection...', throttle_duration_sec=2.0)
+            cv2.imshow("Maze (Live)", frame_disp)
+            cv2.waitKey(1)
+            return
+
         # [Stage 2: Mapping] Converting Image to Graph
         self.bot_mapper.graphify(self.bot_localizer.maze_og)
 
-        # [Stage 3: PathPlanning] Using {User Specified PathPlanner} to find path to goal        
+        # Guard: mapping must produce a valid graph with start and end
+        if not self.bot_mapper.graphified or self.bot_mapper.Graph.start == 0 or self.bot_mapper.Graph.end == 0:
+            self.get_logger().info('Mapping: waiting for valid graph...', throttle_duration_sec=2.0)
+            cv2.imshow("Maze (Live)", frame_disp)
+            cv2.waitKey(1)
+            return
+
+        # [Stage 3: PathPlanning] Using {User Specified PathPlanner} to find path to goal
         start = self.bot_mapper.Graph.start
         end = self.bot_mapper.Graph.end
         maze = self.bot_mapper.maze
@@ -239,16 +253,34 @@ class maze_solver(Node):
         if config.debug and config.debug_pathplanning:
             print("\nNodes Visited [Dijisktra V A-Star*] = [ {} V {} ]".format(self.bot_pathplanner.dijisktra.dijiktra_nodes_visited,self.bot_pathplanner.astar.astar_nodes_visited))
 
+        # Guard: path planning must find a valid path
+        if not self.bot_pathplanner.path_to_goal or len(self.bot_pathplanner.path_to_goal) == 0:
+            self.get_logger().info('PathPlanning: no path found yet...', throttle_duration_sec=2.0)
+            cv2.imshow("Maze (Live)", frame_disp)
+            cv2.waitKey(1)
+            return
+
+        # Guard: localization must have found the car
+        bot_loc = self.bot_localizer.loc_car
+        if bot_loc == 0:
+            self.get_logger().info('Localization: car not detected yet...', throttle_duration_sec=2.0)
+            cv2.imshow("Maze (Live)", frame_disp)
+            cv2.waitKey(1)
+            return
 
         # [Stage 4: MotionPlanning] Reach the (maze exit) by navigating the path previously computed
-        bot_loc = self.bot_localizer.loc_car
         path = self.bot_pathplanner.path_to_goal
         self.bot_motionplanner.nav_path(bot_loc, path, self.vel_msg, self.velocity_publisher)
 
         # Displaying bot solving maze  (Live)
         img_shortest_path = self.bot_pathplanner.img_shortest_path
+        if not isinstance(img_shortest_path, np.ndarray) or img_shortest_path.size == 0:
+            cv2.imshow("Maze (Live)", frame_disp)
+            cv2.waitKey(1)
+            return
+
         self.bot_motionplanner.display_control_mechanism_in_action(bot_loc, path, img_shortest_path, self.bot_localizer, frame_disp)
-        
+
         # View bot view on left to frame Display
         bot_view = cv2.resize(self.bot_view, (int(frame_disp.shape[0]/2),int(frame_disp.shape[1]/2)))
         bot_view = bot_view[0:int(bot_view.shape[0]/1.5),:]
@@ -270,7 +302,7 @@ class maze_solver(Node):
         cv2.putText(frame_disp, "Bot View", orig, cv2.FONT_HERSHEY_PLAIN, 2, (255,0,0),3)
         frame_disp = cv2.rectangle(frame_disp, (20,bot_offset), (bot_view.shape[1]+20,(bot_view.shape[0]+bot_offset)), (0,0,255),12)
         frame_disp[bot_offset:(bot_view.shape[0]+bot_offset),20:bot_view.shape[1]+20] = bot_view
- 
+
         cv2.imshow("Maze (Live)", frame_disp)
         cv2.waitKey(1)
 

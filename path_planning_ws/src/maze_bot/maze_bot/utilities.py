@@ -11,6 +11,8 @@ def imfill(image):
 def ret_largest_obj(img):
     #Find the two Contours for which you want to find the min distance between them.
     cnts = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[0]
+    if len(cnts) == 0:
+        return np.zeros_like(img), None
     Max_Cntr_area = 0
     Max_Cntr_idx= -1
     for index, cnt in enumerate(cnts):
@@ -20,9 +22,10 @@ def ret_largest_obj(img):
             Max_Cntr_idx = index
     img_largestobject = np.zeros_like(img)
     if (Max_Cntr_idx!=-1):
-        img_largestobject = cv2.drawContours(img_largestobject, cnts, Max_Cntr_idx, 255, -1) # [ contour = less then minarea contour, contourIDx, Colour , Thickness ]
-        img_largestobject = cv2.drawContours(img_largestobject, cnts, Max_Cntr_idx, 255, 2) # [ contour = less then minarea contour, contourIDx, Colour , Thickness ]
-    return img_largestobject,cnts[Max_Cntr_idx]
+        img_largestobject = cv2.drawContours(img_largestobject, cnts, Max_Cntr_idx, 255, -1)
+        img_largestobject = cv2.drawContours(img_largestobject, cnts, Max_Cntr_idx, 255, 2)
+        return img_largestobject, cnts[Max_Cntr_idx]
+    return img_largestobject, None
 
 def ret_smallest_obj(cnts, noise_thresh = 10):
   Min_Cntr_area = 1000

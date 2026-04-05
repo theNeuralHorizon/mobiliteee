@@ -200,6 +200,10 @@ class bot_localizer():
         change_mask = cv2.threshold(change_gray, 15, 255, cv2.THRESH_BINARY)[1]
         car_mask, car_cnt = ret_largest_obj(change_mask)
 
+        # Guard: no foreground detected (robot not visible yet)
+        if car_cnt is None:
+            return
+
         # Step 3: Fetching the (relative) location of car.
         self.get_car_loc(car_cnt,car_mask)
 
