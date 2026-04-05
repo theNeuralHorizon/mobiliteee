@@ -23,10 +23,14 @@ Haider Abbasi
 Date :
 6/04/22
 '''
+import sys
 import cv2
 import numpy as np
 
 from . import config
+
+# Increase recursion limit for deep maze graph traversal
+sys.setrecursionlimit(10000)
 
 draw_intrstpts = True
 debug_mapping = False
@@ -102,15 +106,33 @@ class bot_mapper():
             cv2.waitKey(0)                    
             self.maze_connect = cv2.line(self.maze_connect,curr_pixel,neighbor_pixel,(255,255,255),1)
 
-    # Connect curr_node to its neighbors in immediate [left -> top-right] region 
+    # Connect curr_node to its neighbors in immediate [left -> top-right] region
     def connect_neighbors(self,maze,node_row,node_col,case,step_l = 1,step_up = 0,totl_cnncted = 0):
-        
+
         curr_node = (node_row,node_col)
 
-        # Check if there is a path around our node        
-        if (maze[node_row-step_up][node_col-step_l]>0):
+        # Bounds check: ensure target pixel is within maze dimensions
+        target_row = node_row - step_up
+        target_col = node_col - step_l
+        if target_row < 0 or target_row >= maze.shape[0] or target_col < 0 or target_col >= maze.shape[1]:
+            # Out of bounds — skip this direction
+            if not self.connected_left:
+                self.connected_left = True
+                self.connect_neighbors(maze, node_row, node_col, case, 1, 1, totl_cnncted)
+            elif not self.connected_upleft:
+                self.connected_upleft = True
+                self.connect_neighbors(maze, node_row, node_col, case, 0, 1, totl_cnncted)
+            elif not self.connected_up:
+                self.connected_up = True
+                self.connect_neighbors(maze, node_row, node_col, case, -1, 1, totl_cnncted)
+            elif not self.connected_upright:
+                self.connected_upright = True
+            return
+
+        # Check if there is a path around our node
+        if (maze[target_row][target_col]>0):
             # There is a path ==> Look for neighbor node to connect
-            neighbor_node = (node_row-step_up,node_col-step_l)
+            neighbor_node = (target_row, target_col)
             # If potential_neighbor_node is actually a key in graph                
             if neighbor_node in self.Graph.graph.keys():
                 neighbor_case = self.Graph.graph[neighbor_node]["case"]
