@@ -146,6 +146,9 @@ class bot_localizer():
         # Storing Crop and Rot Parameters required to maintain frame of refrence in the orig image
         self.update_frameofrefrence_parameters(X,Y,W,H,90)
 
+        # Mark BG extraction as complete
+        self.is_bg_extracted = True
+
         if (config.debug and config.debug_localization):
             cv2.imshow("1a. rois_mask",rois_mask)
             cv2.imshow("1b. frame_car_remvd",frame_car_remvd)
