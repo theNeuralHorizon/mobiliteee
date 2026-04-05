@@ -196,7 +196,7 @@
               <stddev>0.007</stddev>
             </noise>
           </camera>
-          <topic>rrbot/camera1/image_raw</topic>
+          <topic>upper_camera/image_raw</topic>
         </sensor>
         <self_collide>0</self_collide>
         <enable_wind>0</enable_wind>

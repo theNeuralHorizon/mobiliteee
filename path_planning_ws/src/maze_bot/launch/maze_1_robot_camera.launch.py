@@ -51,7 +51,7 @@ def generate_launch_description():
             "/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist",
             "/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry",
             "/Botcamera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image",
-            "/rrbot/camera1/image_raw@sensor_msgs/msg/Image[gz.msgs.Image",
+            "/upper_camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image",
             "/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V",
         ],
         output="screen",

@@ -1422,7 +1422,7 @@
               <stddev>0.007</stddev>
             </noise>
           </camera>
-          <topic>rrbot/camera1/image_raw</topic>
+          <topic>upper_camera/image_raw</topic>
         </sensor>
       </link>
       <static>1</static>
