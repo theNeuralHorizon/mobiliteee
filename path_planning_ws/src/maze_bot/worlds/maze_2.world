@@ -196,7 +196,7 @@
               <stddev>0.007</stddev>
             </noise>
           </camera>
-          <plugin name='camera_driver' filename='libgazebo_ros_camera.so'/>
+          <topic>rrbot/camera1/image_raw</topic>
         </sensor>
         <self_collide>0</self_collide>
         <enable_wind>0</enable_wind>
