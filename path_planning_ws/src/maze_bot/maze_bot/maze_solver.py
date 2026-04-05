@@ -72,13 +72,16 @@ class maze_solver(Node):
         self.bot_speed = 0
         self.bot_turning = 0
 
-        self.sat_view = np.zeros((100,100))
+        self.sat_view = np.zeros((100,100,3), dtype=np.uint8)
+        self.bot_view = np.zeros((100,100,3), dtype=np.uint8)
+        self.sat_view_received = False
 
         self.debugging = Debugging()
 
     def get_video_feed_cb(self,data):
         frame = self.bridge.imgmsg_to_cv2(data,'bgr8')
         self.sat_view = frame
+        self.sat_view_received = True
     
     def process_data_bot(self, data):
       self.bot_view = self.bridge.imgmsg_to_cv2(data,'bgr8') # performing conversion
@@ -209,13 +212,18 @@ class maze_solver(Node):
 
 
     def maze_solving(self):
-        
+
+        # Wait until satellite camera image is received
+        if not self.sat_view_received:
+            self.get_logger().info('Waiting for satellite camera feed on /upper_camera/image_raw ...', throttle_duration_sec=2.0)
+            return
+
         self.debugging.setDebugParameters()
 
-        # Creating frame to display current robot state to user        
+        # Creating frame to display current robot state to user
         frame_disp = self.sat_view.copy()
-        
-        # [Stage 1: Localization] Localizing robot at each iteration        
+
+        # [Stage 1: Localization] Localizing robot at each iteration
         self.bot_localizer.localize_bot(self.sat_view, frame_disp)
 
         # [Stage 2: Mapping] Converting Image to Graph

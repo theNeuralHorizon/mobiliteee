@@ -33,8 +33,16 @@ from math import pow , atan2,sqrt , degrees,asin
 from numpy import interp
 import pygame
 import os
+from ament_index_python.packages import get_package_share_directory
+
 pygame.mixer.init()
-pygame.mixer.music.load(os.path.abspath('src/maze_bot/resource/aud_chomp.mp3'))
+try:
+    _pkg_share = get_package_share_directory('maze_bot')
+    _audio_path = os.path.join(_pkg_share, 'resource', 'aud_chomp.mp3')
+    if os.path.exists(_audio_path):
+        pygame.mixer.music.load(_audio_path)
+except Exception:
+    pass  # audio is optional, don't crash if missing
 
 from . import config
 
@@ -371,7 +379,12 @@ class bot_motionplanner():
                     self.goal_not_reached_flag = False
                     
                     # Play the party song, Mention that reached goal
-                    pygame.mixer.music.load(os.path.abspath('src/maze_bot/resource/Goal_reached.wav'))
+                    try:
+                        _goal_audio = os.path.join(get_package_share_directory('maze_bot'), 'resource', 'Goal_reached.wav')
+                        if os.path.exists(_goal_audio):
+                            pygame.mixer.music.load(_goal_audio)
+                    except Exception:
+                        pass
                     pygame.mixer.music.play()
             # Still doing mini-goals?
             else:
