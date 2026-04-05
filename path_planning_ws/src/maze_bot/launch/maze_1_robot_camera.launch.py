@@ -1,7 +1,7 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import IncludeLaunchDescription, SetEnvironmentVariable
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 
@@ -11,31 +11,55 @@ def generate_launch_description():
     urdf_file = os.path.join(package_share_dir, "urdf", "maze_bot.urdf")
     world_file = os.path.join(package_share_dir, "worlds", "maze_1.world")
 
-    gazebo_ros_share = get_package_share_directory("gazebo_ros")
-    gazebo_model_path = os.path.join(package_share_dir, "..")
+    with open(urdf_file, "r") as f:
+        robot_description = f.read()
 
-    env = {
-        "GAZEBO_MODEL_PATH": gazebo_model_path,
-    }
+    gz_model_path = os.path.join(package_share_dir, "..")
 
-    gazebo = IncludeLaunchDescription(
+    gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(gazebo_ros_share, "launch", "gazebo.launch.py")
+            os.path.join(
+                get_package_share_directory("ros_gz_sim"),
+                "launch",
+                "gz_sim.launch.py",
+            )
         ),
-        launch_arguments={
-            "verbose": "true",
-            "world": world_file,
-        }.items(),
+        launch_arguments={"gz_args": f"-r {world_file}"}.items(),
+    )
+
+    spawn_entity = Node(
+        package="ros_gz_sim",
+        executable="create",
+        arguments=[
+            "-name", "maze_bot",
+            "-topic", "robot_description",
+        ],
+        output="screen",
     )
 
     robot_state_publisher = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
         output="screen",
-        arguments=[urdf_file],
+        parameters=[{"robot_description": robot_description}],
+    )
+
+    bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        arguments=[
+            "/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist",
+            "/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry",
+            "/Botcamera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image",
+            "/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V",
+        ],
+        output="screen",
     )
 
     return LaunchDescription([
-        gazebo,
+        SetEnvironmentVariable("GZ_SIM_RESOURCE_PATH", gz_model_path),
+        gz_sim,
         robot_state_publisher,
+        spawn_entity,
+        bridge,
     ])

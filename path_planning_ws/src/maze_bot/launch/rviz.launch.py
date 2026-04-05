@@ -6,26 +6,28 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     package_share_dir = get_package_share_directory("maze_bot")
-    urdf = os.path.join(package_share_dir, "urdf", "maze_bot.urdf")
+    urdf_file = os.path.join(package_share_dir, "urdf", "maze_bot.urdf")
+
+    with open(urdf_file, "r") as f:
+        robot_description = f.read()
 
     return LaunchDescription([
         Node(
-            package='robot_state_publisher',
-            executable='robot_state_publisher',
-            name='robot_state_publisher',
-            output='screen',
-            arguments=[urdf],
+            package="robot_state_publisher",
+            executable="robot_state_publisher",
+            name="robot_state_publisher",
+            output="screen",
+            parameters=[{"robot_description": robot_description}],
         ),
         Node(
-            package='joint_state_publisher_gui',
-            executable='joint_state_publisher_gui',
-            name='joint_state_publisher_gui',
-            arguments=[urdf],
+            package="joint_state_publisher_gui",
+            executable="joint_state_publisher_gui",
+            name="joint_state_publisher_gui",
         ),
         Node(
-            package='rviz2',
-            executable='rviz2',
-            name='rviz2',
-            output='screen',
+            package="rviz2",
+            executable="rviz2",
+            name="rviz2",
+            output="screen",
         ),
     ])
